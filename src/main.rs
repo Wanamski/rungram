@@ -1,4 +1,5 @@
 use std::{collections::{HashMap, VecDeque}, fs, process::exit};
+use rand::seq::SliceRandom;
 
 /// takes path to text file and n and trains the model on the given text
 fn train(path: &str, n: usize) -> HashMap<Vec<String>, Vec<String>> {
@@ -19,10 +20,10 @@ fn train(path: &str, n: usize) -> HashMap<Vec<String>, Vec<String>> {
 
     // clean string
     // '.;,-“’”:?—‘!()_'
-    let binding = data.replace(&['(', ')', ',', '\"', '.', ';', ':', '\''][..], "")
-        .to_ascii_lowercase();
-    // let binding = data.replace(&[ '.', ';', ',',  '-', '“', '’', '”', ':', '?', '—', '‘', '!', '(', ')', '_' ][..], "")
+    // let binding = data.replace(&['(', ')', ',', '\"', '.', ';', ':', '\''][..], "")
     //     .to_ascii_lowercase();
+    let binding = data.replace(&[ '.', ';', ',',  '-', '“', '’', '”', ':', '?', '—', '‘', '!', '(', ')', '_' ][..], "")
+        .to_ascii_lowercase();
     let data = binding.split_whitespace().into_iter();
 
     for word in data {
@@ -54,8 +55,41 @@ fn train(path: &str, n: usize) -> HashMap<Vec<String>, Vec<String>> {
     successor_map
 }
 
+/// generates a new String from a trained map, a start value and a length, how many words should be generated
+fn generate(map: HashMap<Vec<String>, Vec<String>>, start: Vec<String>, len: usize) -> String {
+
+    if !map.contains_key(&start) {
+        println!("Start value not found in training data...");
+        exit(1);
+    }
+
+    let mut key_win = start;
+    let mut ret_str = String::new();
+
+    for _ in 0..=len {
+        let gen_vec: Vec<_> = map.get(&key_win).unwrap().choose_multiple(&mut rand::thread_rng(), 1).collect();
+        let gen_str = gen_vec[0];
+
+        ret_str.push_str(&gen_str);
+        ret_str.push_str(" ");
+
+        let mut kw_vd = VecDeque::from(key_win);
+        kw_vd.push_back(gen_str.clone());
+        kw_vd.pop_front();
+        key_win = Vec::from(kw_vd);
+
+    }
+
+    ret_str
+}
+
 fn main() {
     let train_data = train("./samples/jekyll_hyde.txt", 2);
-    println!("{:#?}", train_data);
-    println!("{}", train_data.len());
+    
+    // let test_start = vec!["had".to_string(), "not".to_string(), "crossed".to_string(), "the".to_string()];
+    let test_start = vec![String::from("the")];
+    let response_str = generate(train_data, test_start.clone(), 10);
+
+    println!("start value: {:?}", test_start);
+    println!("response: {}", response_str);
 }
